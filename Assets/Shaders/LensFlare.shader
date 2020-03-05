@@ -38,19 +38,20 @@
                 v2f o;
                 
                 //billboard
-             	float3  viewerLocal = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1));
-				float3  localDir = viewerLocal - float3(0, 0, 0);
+                float3  viewerLocal = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1));
+                float3  localDir = viewerLocal - float3(0, 0, 0);  
 
-				localDir.y = lerp(0, localDir.y, _VerticalBillboarding);
+                localDir.y = lerp(0, localDir.y, _VerticalBillboarding);                
+                localDir = normalize(localDir);
 
-				localDir = normalize(localDir);
-				float3  upLocal = abs(localDir.y) > 0.999f ? float3(0, 0, 1) : float3(0, 1, 0);
-				float3  rightLocal = normalize(cross(localDir, upLocal));
-				upLocal = cross(rightLocal, localDir);
-
-				float3  BBLocalPos = rightLocal * v.vertex.x + upLocal * v.vertex.y;
+                float3  upLocal = abs(localDir.y) > 0.999f ? float3(0, 0, 1) : float3(0, 1, 0);
+                float3  rightLocal = normalize(cross(localDir, upLocal));
+                
+                upLocal = cross(rightLocal, localDir);  
+                            
+                float3  BBLocalPos = rightLocal * v.vertex.x + upLocal * v.vertex.y;
                 o.vertex = UnityObjectToClipPos(float4(BBLocalPos, 1));
-	            o.uv = v.uv;
+                o.uv = v.uv;
 
                 return o;
             }
