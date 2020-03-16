@@ -29,6 +29,7 @@
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+				float4 screenPos : TEXCOORD1;
             };
 
             float _VerticalBillboarding;
@@ -48,10 +49,12 @@
                 float3  rightLocal = normalize(cross(localDir, upLocal));
                 
                 upLocal = cross(rightLocal, localDir);  
-                            
+
                 float3  BBLocalPos = rightLocal * v.vertex.x + upLocal * v.vertex.y;
                 o.vertex = UnityObjectToClipPos(float4(BBLocalPos, 1));
                 o.uv = v.uv;
+
+				o.screenPos = ComputeNonStereoScreenPos(o.vertex);
 
                 return o;
             }
@@ -75,9 +78,33 @@
                 return float4(color, alpha);
             }
 
+			fixed4 LightRay(float4 screenPos)
+			{
+				float screenRatio = _ScreenParams.x / _ScreenParams.y;
+
+				//算出在屏幕左下角（0, 0）为原点，范围为[0, 1]的坐标
+				float2 normScreenPos = (float2(screenPos.x / screenPos.w, screenPos.y / screenPos.w));
+				float2 centerNormScreenPos = (normScreenPos - float2(0.5, 0.5));
+
+				centerNormScreenPos.x = centerNormScreenPos.x * screenRatio;
+
+				float atanv = atan2(centerNormScreenPos.x, centerNormScreenPos.y);
+				//float dotPos = dot(centerNormScreenPos, centerNormScreenPos)*5;
+
+				//float rz = pow(abs(frac(atanv*0.8 + 0.12) - 0.5), 3.0);
+
+				//取余数
+				float fracv = abs(frac(atanv) - 0.5);
+
+				//平滑
+				float powv = clamp(pow(fracv, 3.0), 0, 1);
+
+				return float4(powv, powv, powv, 0);
+			}
+
             fixed4 frag (v2f i) : SV_Target
             {
-                fixed4 sunColor = Sun(i.uv);
+				fixed4 sunColor = Sun(i.uv) + LightRay(i.screenPos);
 
                 return sunColor;
             }
