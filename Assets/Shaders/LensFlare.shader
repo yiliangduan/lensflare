@@ -38,6 +38,9 @@
 
 			float _LightRay;
 
+            float _RenderBoardWidth;
+            float _RenderBoardHeight;
+
             v2f vert (appdata v)
             {
                 v2f o;
@@ -92,7 +95,7 @@
 				float fracv = abs(frac(atanv) - 0.5);
 
 				//平滑
-				float powv = clamp(pow(fracv, 4.0), 0, 1);
+				float powv = clamp(pow(fracv, 3.0), 0, 1);
 
 				//衰减
 				float attenuation = dot(vertexPos, vertexPos);
@@ -104,9 +107,21 @@
 				return rayColor;
 			}
 
-			fixed4 Flare()
+			float Flare(float4 vertex)
 			{
-				return float4(1, 0, 0, 1);
+				float flare = 1;
+                float2 vertexStandard = float2(vertex.x / _RenderBoardWidth, vertex.y / _RenderBoardHeight);
+
+                if (abs(vertexStandard.x) + abs(vertexStandard.y) > 0.5)
+                {
+					flare = 0;
+                }
+
+				float soften =  pow(1 - dot(vertexStandard, vertexStandard), 12);
+
+				flare *= pow(1 - max(abs(vertexStandard.y - vertexStandard.x), abs(vertexStandard.y + vertexStandard.x)), 2) * soften;
+
+				return flare;
 			}
 
             fixed4 frag (v2f i) : SV_Target
@@ -114,7 +129,11 @@
 				fixed4 sunColor = Sun(i.uv);
 				fixed4 lightRay = LightRay(i.localPos);
 
-                return sunColor;
+				float flare = Flare(i.localPos);
+                fixed4 flareColor = fixed4(1, 1, 1, flare);
+
+                //return sunColor + lightRay * (1 - sunColor.a);
+                return flareColor;
             }
 
             ENDCG
