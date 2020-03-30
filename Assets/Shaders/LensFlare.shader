@@ -32,6 +32,7 @@
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
 				float4 localPos : TEXCOORD1;
+				float4 screenPos : TEXCOORD2;
             };
 
             float _VerticalBillboarding;
@@ -64,6 +65,7 @@
                 o.uv = v.uv;
 
 				o.localPos = v.vertex;
+				o.screenPos = ComputeScreenPos(clipPos);
 
                 return o;
             }
@@ -107,19 +109,16 @@
 				return rayColor;
 			}
 
-			float Flare(float4 vertex)
+			float Flare(float2 vertex)
 			{
 				float flare = 1;
-                float2 vertexStandard = float2(vertex.x / _RenderBoardWidth, vertex.y / _RenderBoardHeight);
+                float2 vertexNorm = float2(vertex.x / _RenderBoardWidth, vertex.y / _RenderBoardHeight);
 
-                if (abs(vertexStandard.x) + abs(vertexStandard.y) > 0.5)
-                {
-					flare = 0;
-                }
+				float absVertex = abs(vertexNorm);
+				
+				float weight = max(max(abs(vertexNorm.y*0.385 - absVertex.x*1.176), abs(vertexNorm.y + absVertex.x*0.727)), -vertexNorm.y*1.237);
 
-				float soften =  pow(1 - dot(vertexStandard, vertexStandard), 12);
-
-				flare *= pow(1 - max(abs(vertexStandard.y - vertexStandard.x), abs(vertexStandard.y + vertexStandard.x)), 2) * soften;
+				flare = clamp(0.02 - pow(weight, 2), 0, 1) * 10;
 
 				return flare;
 			}
@@ -129,11 +128,15 @@
 				fixed4 sunColor = Sun(i.uv);
 				fixed4 lightRay = LightRay(i.localPos);
 
-				float flare = Flare(i.localPos);
-                fixed4 flareColor = fixed4(1, 1, 1, flare);
+				fixed4 sunAndRay = (sunColor + lightRay * (1 - sunColor.a));
 
-                //return sunColor + lightRay * (1 - sunColor.a);
-                return flareColor;
+				float flare = Flare(i.localPos.xy + 0.04*i.screenPos.xy);
+				fixed flareAnd = flare > 0 ? 1 : 0;
+                fixed4 flareColor = fixed4(flareAnd, flareAnd, flareAnd, flare);
+
+				fixed4 outputColor = sunAndRay;
+
+				return outputColor;
             }
 
             ENDCG
